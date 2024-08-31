@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "target": "ES2018",
+    "module": "commonjs",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
+    "declaration": true,
+    "sourceMap": true,
+    "removeComments": false,
+    "strictPropertyInitialization": false,
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": "./src/", // Update the baseUrl to the root of your project
+    "paths": {
+      "@api/*": ["api/*"], // Update the paths to match your project structure
+      "@constants/*": ["constants/*"],
+      "@controllers/*": ["controllers/*"],
+      "@middlewares/*": ["middleware/*"],
+      "@routes/*": ["routes/*"],
+      "@utils/*": ["utils/*"]
+    }
+  },
+  "ts-node": {
+    "require": ["tsconfig-paths/register"]
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

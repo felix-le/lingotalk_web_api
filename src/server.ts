@@ -11,7 +11,7 @@ import auth_routes from './routes/index';
 import user_routes from './routes/userroute'
 const app: Application = express();
 
-mongoose.connect()
+
 
 
 dotenv.config();

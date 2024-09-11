@@ -90,7 +90,7 @@ async function Login(req: Request, res: Response) {
         console.log('user', user);
         const access_token = jwt.sign({sub: user._id}, process.env.JWT_ACCESS_SECRET as string, { expiresIn: process.env.JWT_ACCESS_TIME});
         console.log('access_token', access_token);
-        const refresh_token = await GenerateRefreshToken(user._id.toString());
+        const refresh_token = await GenerateRefreshToken(user._id as string);
         return res.json({status: true, message: "login success", data: {access_token, refresh_token}});
     } catch (error) {
         return res.status(401).json({status: true, message: "login fail", data: error});

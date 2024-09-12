@@ -9,9 +9,12 @@ import mongoose from "mongoose";
 import cache from "./routeCache";
 import auth_routes from './routes/index';
 import user_routes from './routes/userroute'
+
 const app: Application = express();
 
-
+mongoose.connect(process.env.DB_CONN_STRING as string)
+.then(() => console.log('MongoDB connected!'))
+.catch(err => console.error('Connection error', err));
 
 
 dotenv.config();

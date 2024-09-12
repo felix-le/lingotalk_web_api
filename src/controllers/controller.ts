@@ -67,11 +67,11 @@ async function Logout(req: Request, res: Response) {
     }
   }
 
-function GetAccessToken(req: Request, res: Response) {
+async function GetAccessToken(req: Request, res: Response) {
     const user_id = req.userData?.sub;
   
     const access_token = jwt.sign({ sub: user_id }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: process.env.JWT_ACCESS_TIME });
-    const refresh_token = GenerateRefreshToken(user_id as string);
+    const refresh_token = await GenerateRefreshToken(user_id as string);
   
     return res.json({ status: true, message: "Success", data: { access_token, refresh_token } });
 }

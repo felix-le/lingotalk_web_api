@@ -1,18 +1,9 @@
 
 import User from '../models/user'; 
-import dotenv from "dotenv";
-import express, { Application, Request, Response, NextFunction } from "express";
-import bodyParser from "body-parser"; // Assuming you want to use the jsonParser middleware
-import logger from "morgan";
-import cors from "cors";
-import routes from "@routes/index";
+import { Request, Response } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import redisClient from '../redis_connect';
 // const { auth } = require('express-oauth2-jwt-bearer');
-
-
-
-
 
 const PORT: number = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 declare global {

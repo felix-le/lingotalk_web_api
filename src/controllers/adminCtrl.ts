@@ -14,7 +14,7 @@ declare global {
   }
 }
 
-const authCtrl = {
+const adminCtrl = {
   register: async (req: Request, res: Response) => {
     const newUser = new User({
       username: req.body.username,
@@ -209,4 +209,4 @@ const authCtrl = {
   },
 };
 
-export default authCtrl;
+export default adminCtrl;

@@ -7,7 +7,7 @@ import routes from "@routes/index";
 // const { auth } = require('express-oauth2-jwt-bearer');
 import mongoose from "mongoose";
 import auth_routes from "./routes/index";
-import admin_routes from "./routes/admin-route";
+import admin_routes from "./routes/dashboard-routes";
 
 const app: Application = express();
 

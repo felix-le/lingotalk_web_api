@@ -4,43 +4,64 @@ import bodyParser from "body-parser"; // Assuming you want to use the jsonParser
 import logger from "morgan";
 import cors from "cors";
 import routes from "@routes/index";
-// const { auth } = require('express-oauth2-jwt-bearer');
 import mongoose from "mongoose";
-import cache from "./routeCache";
-import auth_routes from './routes/index';
-import user_routes from './routes/userroute'
+import TranslationModel, { ITranslation } from "models/translation";
+import translationJson from "./translations.json";
+// interface ITranslation {
+//   original_language: string;
+//   [key: string]: any; // Add other properties as needed
+// }
 
 const app: Application = express();
 
-mongoose.connect(process.env.DB_CONN_STRING as string)
-.then(() => console.log('MongoDB connected!'))
-.catch(err => console.error('Connection error', err));
-
+mongoose
+  .connect(process.env.DB_CONN_STRING as string)
+  .then(() => console.log("MongoDB connected!"))
+  .catch((err) => console.error("Connection error", err));
 
 dotenv.config();
 app.use(cors());
 app.use(logger("dev"));
-app.use(express.json())
+app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.set("json spaces", 4);
 
-const PORT: number = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+const PORT: number = process.env.PORT ? parseInt(process.env.PORT) : 5501;
 
+app.use("/web/api", routes); // use routes
+interface MongoDate {
+  $date: string;
+}
 
-app.use('/v1/auth', auth_routes)
-app.use('/v1/user', user_routes)
+// Type guard to check if the value is in MongoDB's date format
+const isMongoDate = (value: any): value is MongoDate => {
+  return value && typeof value === "object" && "$date" in value;
+};
+const startServer = async () => {
+  try {
+    // Assuming translationJson is an array of objects
+    const translations = Array.isArray(translationJson)
+      ? translationJson
+      : [translationJson];
 
+    for (const item of translations) {
+      if (!item.original_language) {
+        console.log("Missing original_language:", item);
+        continue; // Skip saving this item
+      }
 
-// app.use('/api/chinese-speaking', checkJwt, cache(300),  routes); // use routes
-app.use("/web/api", cache(300), routes); // use routes
+      // Ensure that item conforms to the ITranslation interface
+      const conversation = new TranslationModel(item as ITranslation);
+      await conversation.save(); // Save the data to MongoDB
+    }
 
-
-
-
-
-app.listen(PORT, () => {
-  console.log("Server is running on port", PORT);
-});
-
+    app.listen(PORT, () => {
+      console.log("Server is running on port", PORT);
+    });
+  } catch (e) {
+    console.log(e);
+  }
+};
+startServer();
 export default app;

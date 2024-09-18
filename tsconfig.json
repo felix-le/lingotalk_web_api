@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2018",
-    "module": "commonjs",
+    "module": "Node16",
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
@@ -9,15 +9,15 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node",
+    "moduleResolution": "node16",
     "declaration": true,
     "sourceMap": true,
     "removeComments": false,
     "strictPropertyInitialization": false,
     "allowSyntheticDefaultImports": true,
-    "baseUrl": "./src/", // Update the baseUrl to the root of your project
+    "baseUrl": "./src/",
     "paths": {
-      "@api/*": ["api/*"], // Update the paths to match your project structure
+      "@api/*": ["api/*"],
       "@constants/*": ["constants/*"],
       "@controllers/*": ["controllers/*"],
       "@middlewares/*": ["middleware/*"],
@@ -28,11 +28,6 @@
   "ts-node": {
     "require": ["tsconfig-paths/register"]
   },
-  "include": [
-    "src/**/*.ts",
-    
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
 }

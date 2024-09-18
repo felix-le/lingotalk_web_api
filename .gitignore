@@ -27,7 +27,6 @@ node_modules
 .DS_Store
 /crv
 /pdfs
-*.lock
 
 xlsxFiles/loginBackUp/
 

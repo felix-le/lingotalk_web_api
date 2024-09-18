@@ -1,16 +1,12 @@
 import express, { Router, Request, Response, NextFunction } from "express";
 import { statusConstants } from "@constants/status.constants";
-import userController from '../controllers/controller'; // Adjust the path as needed
-import authMiddleware from '../middleware/middleware'
+// import authCtrl from "../controllers/authCtrl"; // Adjust the path as needed
 import dotenv from "dotenv";
 dotenv.config();
 const router: Router = express.Router();
+import adminRouter from "./admin-routes";
 
-router.post("/register", userController.Register);
-router.post("/login", userController.Login);
-router.post('/token', authMiddleware.verifyRefreshToken, userController.GetAccessToken);
-router.get('/logout', authMiddleware.verifyToken, userController.Logout);
-
+router.use("/admin", adminRouter);
 
 router.get("/", function (req, res, next) {
   res

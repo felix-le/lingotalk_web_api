@@ -21,7 +21,6 @@ const adminCtrl = {
       username: req.body.username,
       password: req.body.password,
     });
-    console.log("🚀 ~ file: adminCtrl.ts:50 ~ register: ~ newUser:", newUser);
 
     try {
       // Save the user to the database
@@ -40,78 +39,6 @@ const adminCtrl = {
         .json({ message: "Error registering user", data: error });
     }
   },
-
-  logout: async (req: Request, res: Response) => {
-    try {
-      const user_id = req.userData?.sub as string;
-      const token = req.headers.authorization?.split(" ")[1]; // Extract the token from the Authorization header
-
-      if (!user_id || !token) {
-        return res.status(400).json({
-          status: false,
-          message: "Invalid request, missing user or token.",
-        });
-      }
-
-      // Remove the refresh token from cache
-      await setCache(user_id.toString(), null, 0);
-
-      // Blacklist the current access token with an expiration time matching the token's expiry
-      const accessTokenExpiry = Math.floor(
-        (jwt.decode(token) as JwtPayload).exp! - Date.now() / 1000
-      );
-
-      if (accessTokenExpiry > 0) {
-        await setCache(
-          `BL_${user_id.toString()}`,
-          token,
-          accessTokenExpiry * 1000
-        );
-      }
-
-      return res.json({ status: true, message: "Logout successful." });
-    } catch (error) {
-      return res
-        .status(500)
-        .json({ status: false, message: "Logout failed", data: error });
-    }
-  },
-
-  getAccessToken: async (req: Request, res: Response) => {
-    const user_id = req.userData?.sub;
-
-    // Attempt to retrieve cached access token
-    let access_token = await getCache(`access_token_${user_id}`);
-    let refresh_token = await getCache(`refresh_token_${user_id}`);
-
-    if (!access_token || !refresh_token) {
-      access_token = jwt.sign(
-        { sub: user_id },
-        process.env.JWT_ACCESS_SECRET as string,
-        { expiresIn: process.env.JWT_ACCESS_TIME }
-      );
-      refresh_token = await authCtrl.generateRefreshToken(user_id as string);
-
-      // Set cache for tokens
-      await setCache(
-        `access_token_${user_id}`,
-        access_token,
-        DEFAULT_CACHE_TIME
-      );
-      await setCache(
-        `refresh_token_${user_id}`,
-        refresh_token,
-        DEFAULT_CACHE_TIME
-      );
-    }
-
-    return res.json({
-      status: true,
-      message: "Success",
-      data: { access_token, refresh_token },
-    });
-  },
-
   login: async (req: Request, res: Response) => {
     const username = req.body.username;
     const password = req.body.password;
@@ -182,6 +109,74 @@ const adminCtrl = {
         .status(401)
         .json({ status: true, message: "login fail", data: error });
     }
+  },
+  logout: async (req: Request, res: Response) => {
+    try {
+      const user_id = req.userData?.sub as string;
+      const token = req.headers.authorization?.split(" ")[1]; // Extract the token from the Authorization header
+
+      if (!user_id || !token) {
+        return res.status(400).json({
+          status: false,
+          message: "Invalid request, missing user or token.",
+        });
+      }
+
+      // Remove the refresh token from cache
+      await setCache(user_id, null, 0);
+
+      // Decode the token to get its expiry time
+      const decodedToken = jwt.decode(token) as JwtPayload;
+      const accessTokenExpiry = decodedToken.exp
+        ? Math.floor(decodedToken.exp - Date.now() / 1000)
+        : null;
+
+      if (accessTokenExpiry && accessTokenExpiry > 0) {
+        await setCache(`BL_${user_id}`, token, accessTokenExpiry);
+      }
+
+      return res.json({ status: true, message: "Logout successful." });
+    } catch (error) {
+      console.error("Logout error:", error);
+      return res
+        .status(500)
+        .json({ status: false, message: "Logout failed", data: error });
+    }
+  },
+
+  getAccessToken: async (req: Request, res: Response) => {
+    const user_id = req.userData?.sub;
+
+    // Attempt to retrieve cached access token
+    let access_token = await getCache(`access_token_${user_id}`);
+    let refresh_token = await getCache(`refresh_token_${user_id}`);
+
+    if (!access_token || !refresh_token) {
+      access_token = jwt.sign(
+        { sub: user_id },
+        process.env.JWT_ACCESS_SECRET as string,
+        { expiresIn: process.env.JWT_ACCESS_TIME }
+      );
+      refresh_token = await authCtrl.generateRefreshToken(user_id as string);
+
+      // Set cache for tokens
+      await setCache(
+        `access_token_${user_id}`,
+        access_token,
+        DEFAULT_CACHE_TIME
+      );
+      await setCache(
+        `refresh_token_${user_id}`,
+        refresh_token,
+        DEFAULT_CACHE_TIME
+      );
+    }
+
+    return res.json({
+      status: true,
+      message: "Success",
+      data: { access_token, refresh_token },
+    });
   },
 };
 

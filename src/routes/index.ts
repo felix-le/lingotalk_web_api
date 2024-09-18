@@ -6,14 +6,6 @@ import dotenv from "dotenv";
 dotenv.config();
 const router: Router = express.Router();
 import adminRouter from "./admin-routes";
-// router.post("/register", authCtrl.register);
-// router.post("/login", authCtrl.login);
-// router.post(
-//   "/token",
-//   authMiddleware.verifyRefreshToken,
-//   authCtrl.getAccessToken
-// );
-// router.get("/logout", authMiddleware.verifyToken, authCtrl.logout);
 
 router.use("/admin", adminRouter);
 

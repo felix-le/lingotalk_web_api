@@ -1,7 +1,8 @@
-import User, { IUser } from "../models/admin";
+import Admin, { IUser } from "../models/admin";
 import { Request, Response } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { setCache, getCache, DEFAULT_CACHE_TIME } from "@utils/cache";
+import authCtrl from "./authCtrl"; // Import the auth controller
 
 const PORT: number = process.env.PORT ? parseInt(process.env.PORT) : 5501;
 
@@ -16,10 +17,11 @@ declare global {
 
 const adminCtrl = {
   register: async (req: Request, res: Response) => {
-    const newUser = new User({
+    const newUser = new Admin({
       username: req.body.username,
       password: req.body.password,
     });
+    console.log("🚀 ~ file: adminCtrl.ts:50 ~ register: ~ newUser:", newUser);
 
     try {
       // Save the user to the database
@@ -123,7 +125,7 @@ const adminCtrl = {
 
       if (!user) {
         // If not cached, query the database
-        user = await User.findOne<IUser>({
+        user = await Admin.findOne<IUser>({
           username: username,
           password: password,
         }).exec();
@@ -179,32 +181,6 @@ const adminCtrl = {
       return res
         .status(401)
         .json({ status: true, message: "login fail", data: error });
-    }
-  },
-
-  generateRefreshToken: async (user_id: string) => {
-    const refresh_token = jwt.sign(
-      { sub: user_id },
-      process.env.JWT_REFRESH_SECRET as string,
-      { expiresIn: process.env.JWT_REFRESH_TIME }
-    );
-
-    if (!refresh_token) {
-      throw new Error("Failed to generate refresh token");
-    }
-
-    try {
-      // Ensure the refresh token is a valid string before setting it in cache
-      await setCache(
-        user_id.toString(),
-        JSON.stringify({ token: refresh_token }),
-        DEFAULT_CACHE_TIME
-      );
-
-      return refresh_token;
-    } catch (error) {
-      console.error("Error storing refresh token in cache:", error);
-      throw error; // Re-throw error to handle it appropriately in the calling function
     }
   },
 };

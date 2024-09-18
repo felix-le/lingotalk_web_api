@@ -1,3 +1,4 @@
+Tự setup redis server trên local em nhé
 TODO:
 
 1. List all admin

@@ -35,11 +35,11 @@ async function verifyToken(req: Request, res: Response, next: NextFunction) {
       token,
       process.env.JWT_ACCESS_SECRET as string
     ) as JwtPayload;
+
     req.userData = decoded;
     req.token = token;
 
     // Verify blacklisted access token
-   
 
     next();
   } catch (error) {
@@ -50,7 +50,6 @@ async function verifyToken(req: Request, res: Response, next: NextFunction) {
     });
   }
 }
-
 
 async function verifyRefreshToken(
   req: Request,
@@ -75,7 +74,6 @@ async function verifyRefreshToken(
 
     // Verify if token is in store or not
 
-
     next();
   } catch (error) {
     return res.status(401).json({
@@ -85,7 +83,7 @@ async function verifyRefreshToken(
     });
   }
 }
-async function checkPermission(role: 0 | 1 | 2)  {
+async function checkPermission(role: 0 | 1 | 2) {
   return (req: Request, res: Response, next: NextFunction) => {
     const user = req.userData as IUser; // Assuming JWT contains user role
 
@@ -106,7 +104,7 @@ async function checkPermission(role: 0 | 1 | 2)  {
       message: "You do not have permission to perform this action",
     });
   };
-};
+}
 export default {
   verifyToken,
   verifyRefreshToken,

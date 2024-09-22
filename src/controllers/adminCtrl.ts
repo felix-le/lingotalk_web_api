@@ -20,21 +20,20 @@ const adminCtrl = {
     try {
       const { username, password } = req.body;
 
-      
       const existingUser = await Admin.findOne({ username }).exec();
+
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists." });
       }
       const newUser = new Admin({
-        username: req.body.username,
-        password: req.body.password,
-        level: 2,
+        username,
+        password,
+        level: 0,
       });
       // Save the user to the database
       const saved_user = await newUser.save();
 
       // Cache the registered user data with key based on username and password
-    
 
       return res
         .status(201)
@@ -50,27 +49,27 @@ const adminCtrl = {
     const password = req.body.password;
 
     try {
-  
-        const user = await Admin.findOne<IUser>({
-          username: username,
-          password: password,
-        }).exec();
+      const user = await Admin.findOne<IUser>({
+        username: username,
+        password: password,
+      }).exec();
 
-        if (!user) {
-          return res.status(401).json({
-            status: false,
-            message: "Username or password is not valid.",
-          });
-        }
+      if (!user) {
+        return res.status(401).json({
+          status: false,
+          message: "Username or password is not valid.",
+        });
+      }
 
       const access_token = jwt.sign(
-            { sub: user._id }, // Include role for authorization checks if necessary
-            process.env.JWT_ACCESS_SECRET as string, 
-            { expiresIn: process.env.JWT_ACCESS_TIME }
+        { sub: user._id }, // Include role for authorization checks if necessary
+        process.env.JWT_ACCESS_SECRET as string,
+        { expiresIn: process.env.JWT_ACCESS_TIME }
       );
-      
 
-      const refresh_token = await authCtrl.generateRefreshToken(user._id.toString());
+      const refresh_token = await authCtrl.generateRefreshToken(
+        user._id.toString()
+      );
 
       return res.json({
         status: true,
@@ -95,12 +94,11 @@ const adminCtrl = {
         });
       }
 
-
       const decodedToken = jwt.decode(token) as JwtPayload;
       const accessTokenExpiry = decodedToken.exp
         ? Math.floor(decodedToken.exp - Date.now() / 1000)
         : null;
-        
+
       return res.json({ status: true, message: "Logout successful." });
     } catch (error) {
       console.error("Logout error:", error);
@@ -113,13 +111,14 @@ const adminCtrl = {
   getAccessToken: async (req: Request, res: Response) => {
     const user_id = req.userData?.sub;
 
-    
     const access_token = jwt.sign(
-        { sub: user_id },
-        process.env.JWT_ACCESS_SECRET as string,
-        { expiresIn: process.env.JWT_ACCESS_TIME }
+      { sub: user_id },
+      process.env.JWT_ACCESS_SECRET as string,
+      { expiresIn: process.env.JWT_ACCESS_TIME }
     );
-    const refresh_token = await authCtrl.generateRefreshToken(user_id as string);
+    const refresh_token = await authCtrl.generateRefreshToken(
+      user_id as string
+    );
 
     return res.json({
       status: true,
@@ -128,54 +127,25 @@ const adminCtrl = {
     });
   },
 
-  listAdmins: async (req: Request, res: Response) => {
-    const user = req.userData as IUser;
-
-    try {
-      if (Number(user.level) < 1) {
-        return res.status(403).json({
-          status: false,
-          message: "Access denied. Only admins can view this data.",
-        });
-      }
-  
-      // Fetch all users with level 1 (admin) or higher
-      const admins = await Admin.find({ level: { $gte: 1 } })
-        .sort({ original_language: 1, learning_language: 1 })
-        .exec();
-      
-      return res.json({ status: true, data: admins });
-
-     
-    } catch (error) {
-      return res.status(500).json({
-        status: false,
-        message: "Error fetching admins",
-        data: error,
-      });
-    }
-  },
   modeAdmin: async (req: Request, res: Response) => {
+    const user_id = req.userData?.sub;
 
-    const user = req.userData as IUser;
     try {
-      if (!user) {
+      const userInfo = await Admin.findOne({ _id: user_id });
+
+      if (!userInfo) {
         return res.status(401).json({
           status: false,
           message: "Unauthorized",
         });
       }
-      if (Number(user.level) === 0) {
-        const modsData = await Admin.find({
-          original_language: user.original_language,
-          learning_language: user.learning_language,
-        }).exec();
-        return res.json({ status: true, data: modsData });
-      }
+      const level = userInfo.level;
 
-      if (Number(user.level) === 1 || Number(user.level) === 2) {
-        const allAdmins = await Admin.find({}).exec();
-        return res.json({ status: true, data: allAdmins });
+      if (Number(level) === 1) {
+        const all = await Admin.find({ level: { $in: [0, 1] } })
+          .sort({ original_language: 1, learning_language: 1 })
+          .exec();
+        return res.json({ status: true, data: all });
       }
 
       return res.status(403).json({
@@ -190,21 +160,70 @@ const adminCtrl = {
       });
     }
   },
-
-  createAdmin: async (req: Request, res: Response) => {
-    const user = req.userData as IUser;
-
-    if (Number(user.level) !== 2) {
-      return res.status(403).json({
-        status: false,
-        message: "Access denied. Only super admins can create new users.",
-      });
-    }
-
-    const { username, password, level, original_language, learning_language } =
-      req.body;
+  // Super
+  listAllAdmins: async (req: Request, res: Response) => {
+    const user_id = req.userData?.sub;
 
     try {
+      const userInfo = await Admin.findOne({ _id: user_id });
+      if (!userInfo) {
+        return res.status(404).json({
+          status: false,
+          message: "User not found.",
+        });
+      }
+      const level = userInfo.level;
+
+      if (Number(level) < 2) {
+        return res.status(403).json({
+          status: false,
+          message: "Access denied. Only super admins can view this data.",
+        });
+      }
+
+      // Fetch all users with level 1 (admin) or higher
+      const all = await Admin.find({ level: { $in: [0, 1, 2] } })
+        .sort({ original_language: 1, learning_language: 1 })
+        .exec();
+
+      return res.json({ status: true, data: all });
+    } catch (error) {
+      return res.status(500).json({
+        status: false,
+        message: "Error fetching admins",
+        data: error,
+      });
+    }
+  },
+  createAdmin: async (req: Request, res: Response) => {
+    const user_id = req.userData?.sub;
+
+    try {
+      const userInfo = await Admin.findOne({ _id: user_id });
+
+      if (!userInfo) {
+        return res.status(401).json({
+          status: false,
+          message: "Unauthorized",
+        });
+      }
+      const adminLevel = userInfo.level;
+
+      if (Number(adminLevel) !== 2) {
+        return res.status(403).json({
+          status: false,
+          message: "Access denied. Only super admins can create new users.",
+        });
+      }
+
+      const {
+        username,
+        password,
+        level,
+        original_language,
+        learning_language,
+      } = req.body;
+
       const newUser = new Admin({
         username,
         password,
@@ -230,29 +249,38 @@ const adminCtrl = {
   },
 
   deleteAdmin: async (req: Request, res: Response) => {
-    const user = req.userData as IUser;
+    const user_id = req.userData?.sub;
 
-    if (Number(user.level) !== 2) {
-      return res.status(403).json({
-        status: false,
-        message: "Access denied. Only super admins can delete users.",
-      });
-    }
-  
-    const userIdToDelete = req.params.id;
-  
     try {
-      const userToDelete = await Admin.findById(userIdToDelete);
-  
-      if (!userToDelete) {
+      const userInfo = await Admin.findOne({ _id: user_id });
+
+      if (!userInfo) {
+        return res.status(401).json({
+          status: false,
+          message: "Unauthorized",
+        });
+      }
+      const adminLevel = userInfo.level;
+
+      if (Number(adminLevel) !== 2) {
+        return res.status(403).json({
+          status: false,
+          message: "Access denied. Only super admins can delete new user.",
+        });
+      }
+
+      const deletedUserId = req.params.id;
+
+      const user = await Admin.findOne({ _id: deletedUserId });
+
+      if (!user) {
         return res.status(404).json({
           status: false,
           message: "User not found.",
         });
       }
-  
-      await Admin.deleteOne({ _id: userIdToDelete });
-  
+      await Admin.deleteOne({ _id: deletedUserId });
+
       return res.status(200).json({
         status: true,
         message: "User deleted successfully.",
@@ -264,7 +292,7 @@ const adminCtrl = {
         data: error,
       });
     }
-  }
+  },
 };
 
 export default adminCtrl;

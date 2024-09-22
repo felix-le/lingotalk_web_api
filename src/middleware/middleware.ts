@@ -1,6 +1,7 @@
 import express, { Application, Request, Response, NextFunction } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { setCache, getCache, DEFAULT_CACHE_TIME } from "@utils/cache";
+import Admin, { IUser } from "../models/admin";
 
 const PORT: number = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
@@ -38,15 +39,7 @@ async function verifyToken(req: Request, res: Response, next: NextFunction) {
     req.token = token;
 
     // Verify blacklisted access token
-    const blacklistedToken = await getCache(
-      "BL_" + decoded.sub?.toString() || ""
-    );
-
-    if (blacklistedToken === token) {
-      return res
-        .status(401)
-        .json({ status: false, message: "Blacklisted token." });
-    }
+   
 
     next();
   } catch (error) {
@@ -57,6 +50,7 @@ async function verifyToken(req: Request, res: Response, next: NextFunction) {
     });
   }
 }
+
 
 async function verifyRefreshToken(
   req: Request,
@@ -80,21 +74,7 @@ async function verifyRefreshToken(
     req.userData = decoded;
 
     // Verify if token is in store or not
-    const data = await getCache(decoded.sub?.toString() || "");
 
-    if (data === null) {
-      return res.status(401).json({
-        status: false,
-        message: "Invalid request. Token is not in store.",
-      });
-    }
-
-    if (JSON.parse(data).token !== token) {
-      return res.status(401).json({
-        status: false,
-        message: "Invalid request. Token does not match store.",
-      });
-    }
 
     next();
   } catch (error) {
@@ -105,8 +85,30 @@ async function verifyRefreshToken(
     });
   }
 }
+async function checkPermission(role: 0 | 1 | 2)  {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const user = req.userData as IUser; // Assuming JWT contains user role
 
+    if (user.level === 2) {
+      return next(); // Super admin has full access
+    }
+
+    if (role === 1 && user.level === 1) {
+      return next(); // Admin can view all data
+    }
+
+    if (role === 0 && user.level === 0) {
+      return next(); // Mod can view only their own data
+    }
+
+    return res.status(403).json({
+      status: false,
+      message: "You do not have permission to perform this action",
+    });
+  };
+};
 export default {
   verifyToken,
   verifyRefreshToken,
+  checkPermission,
 };

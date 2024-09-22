@@ -15,11 +15,7 @@ const authCtrl = {
 
     try {
       // Ensure the refresh token is a valid string before setting it in cache
-      await setCache(
-        user_id.toString(),
-        JSON.stringify({ token: refresh_token }),
-        DEFAULT_CACHE_TIME
-      );
+    
 
       return refresh_token;
     } catch (error) {

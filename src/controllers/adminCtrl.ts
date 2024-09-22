@@ -4,7 +4,7 @@ import jwt, { JwtPayload } from "jsonwebtoken";
 import { setCache, getCache, DEFAULT_CACHE_TIME } from "@utils/cache";
 import authCtrl from "./authCtrl"; // Import the auth controller
 
-const PORT: number = process.env.PORT ? parseInt(process.env.PORT) : 5501;
+const PORT: number = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
 declare global {
   namespace Express {
@@ -17,18 +17,24 @@ declare global {
 
 const adminCtrl = {
   register: async (req: Request, res: Response) => {
-    const newUser = new Admin({
-      username: req.body.username,
-      password: req.body.password,
-    });
-
     try {
+      const { username, password } = req.body;
+
+      
+      const existingUser = await Admin.findOne({ username }).exec();
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists." });
+      }
+      const newUser = new Admin({
+        username: req.body.username,
+        password: req.body.password,
+        level: 2,
+      });
       // Save the user to the database
       const saved_user = await newUser.save();
 
       // Cache the registered user data with key based on username and password
-      const cacheKey = `user-${req.body.username}-${req.body.password}`;
-      await setCache(cacheKey, saved_user, DEFAULT_CACHE_TIME);
+    
 
       return res
         .status(201)
@@ -44,15 +50,8 @@ const adminCtrl = {
     const password = req.body.password;
 
     try {
-      // Create a cache key for this user based on username and password
-      const cacheKey = `user-${username}-${password}`;
-
-      // Check if the user data is already cached
-      let user: IUser | null = (await getCache(cacheKey)) as IUser | null;
-
-      if (!user) {
-        // If not cached, query the database
-        user = await Admin.findOne<IUser>({
+  
+        const user = await Admin.findOne<IUser>({
           username: username,
           password: password,
         }).exec();
@@ -64,40 +63,14 @@ const adminCtrl = {
           });
         }
 
-        // Cache the user data
-        await setCache(cacheKey, user, DEFAULT_CACHE_TIME);
-      }
+      const access_token = jwt.sign(
+            { sub: user._id }, // Include role for authorization checks if necessary
+            process.env.JWT_ACCESS_SECRET as string, 
+            { expiresIn: process.env.JWT_ACCESS_TIME }
+      );
+      
 
-      console.log("user", user);
-
-      // Attempt to retrieve cached tokens
-      let access_token = await getCache(`access_token_${user._id}`);
-      let refresh_token = await getCache(`refresh_token_${user._id}`);
-
-      if (!access_token || !refresh_token) {
-        access_token = jwt.sign(
-          { sub: user._id },
-          process.env.JWT_ACCESS_SECRET as string,
-          { expiresIn: process.env.JWT_ACCESS_TIME }
-        );
-        console.log("access_token", access_token);
-
-        refresh_token = await authCtrl.generateRefreshToken(
-          user._id as unknown as string
-        );
-
-        // Set cache for tokens
-        await setCache(
-          `access_token_${user._id}`,
-          access_token,
-          DEFAULT_CACHE_TIME
-        );
-        await setCache(
-          `refresh_token_${user._id}`,
-          refresh_token,
-          DEFAULT_CACHE_TIME
-        );
-      }
+      const refresh_token = await authCtrl.generateRefreshToken(user._id.toString());
 
       return res.json({
         status: true,
@@ -122,19 +95,12 @@ const adminCtrl = {
         });
       }
 
-      // Remove the refresh token from cache
-      await setCache(user_id, null, 0);
 
-      // Decode the token to get its expiry time
       const decodedToken = jwt.decode(token) as JwtPayload;
       const accessTokenExpiry = decodedToken.exp
         ? Math.floor(decodedToken.exp - Date.now() / 1000)
         : null;
-
-      if (accessTokenExpiry && accessTokenExpiry > 0) {
-        await setCache(`BL_${user_id}`, token, accessTokenExpiry);
-      }
-
+        
       return res.json({ status: true, message: "Logout successful." });
     } catch (error) {
       console.error("Logout error:", error);
@@ -147,30 +113,13 @@ const adminCtrl = {
   getAccessToken: async (req: Request, res: Response) => {
     const user_id = req.userData?.sub;
 
-    // Attempt to retrieve cached access token
-    let access_token = await getCache(`access_token_${user_id}`);
-    let refresh_token = await getCache(`refresh_token_${user_id}`);
-
-    if (!access_token || !refresh_token) {
-      access_token = jwt.sign(
+    
+    const access_token = jwt.sign(
         { sub: user_id },
         process.env.JWT_ACCESS_SECRET as string,
         { expiresIn: process.env.JWT_ACCESS_TIME }
-      );
-      refresh_token = await authCtrl.generateRefreshToken(user_id as string);
-
-      // Set cache for tokens
-      await setCache(
-        `access_token_${user_id}`,
-        access_token,
-        DEFAULT_CACHE_TIME
-      );
-      await setCache(
-        `refresh_token_${user_id}`,
-        refresh_token,
-        DEFAULT_CACHE_TIME
-      );
-    }
+    );
+    const refresh_token = await authCtrl.generateRefreshToken(user_id as string);
 
     return res.json({
       status: true,
@@ -178,6 +127,144 @@ const adminCtrl = {
       data: { access_token, refresh_token },
     });
   },
+
+  listAdmins: async (req: Request, res: Response) => {
+    const user = req.userData as IUser;
+
+    try {
+      if (Number(user.level) < 1) {
+        return res.status(403).json({
+          status: false,
+          message: "Access denied. Only admins can view this data.",
+        });
+      }
+  
+      // Fetch all users with level 1 (admin) or higher
+      const admins = await Admin.find({ level: { $gte: 1 } })
+        .sort({ original_language: 1, learning_language: 1 })
+        .exec();
+      
+      return res.json({ status: true, data: admins });
+
+     
+    } catch (error) {
+      return res.status(500).json({
+        status: false,
+        message: "Error fetching admins",
+        data: error,
+      });
+    }
+  },
+  modeAdmin: async (req: Request, res: Response) => {
+
+    const user = req.userData as IUser;
+    try {
+      if (!user) {
+        return res.status(401).json({
+          status: false,
+          message: "Unauthorized",
+        });
+      }
+      if (Number(user.level) === 0) {
+        const modsData = await Admin.find({
+          original_language: user.original_language,
+          learning_language: user.learning_language,
+        }).exec();
+        return res.json({ status: true, data: modsData });
+      }
+
+      if (Number(user.level) === 1 || Number(user.level) === 2) {
+        const allAdmins = await Admin.find({}).exec();
+        return res.json({ status: true, data: allAdmins });
+      }
+
+      return res.status(403).json({
+        status: false,
+        message: "Access denied.",
+      });
+    } catch (error) {
+      return res.status(500).json({
+        status: false,
+        message: "Error fetching admins",
+        data: error,
+      });
+    }
+  },
+
+  createAdmin: async (req: Request, res: Response) => {
+    const user = req.userData as IUser;
+
+    if (Number(user.level) !== 2) {
+      return res.status(403).json({
+        status: false,
+        message: "Access denied. Only super admins can create new users.",
+      });
+    }
+
+    const { username, password, level, original_language, learning_language } =
+      req.body;
+
+    try {
+      const newUser = new Admin({
+        username,
+        password,
+        level,
+        original_language,
+        learning_language,
+      });
+
+      const savedUser = await newUser.save();
+
+      return res.status(201).json({
+        status: true,
+        message: "User created successfully.",
+        data: savedUser,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        status: false,
+        message: "Error creating user",
+        data: error,
+      });
+    }
+  },
+
+  deleteAdmin: async (req: Request, res: Response) => {
+    const user = req.userData as IUser;
+
+    if (Number(user.level) !== 2) {
+      return res.status(403).json({
+        status: false,
+        message: "Access denied. Only super admins can delete users.",
+      });
+    }
+  
+    const userIdToDelete = req.params.id;
+  
+    try {
+      const userToDelete = await Admin.findById(userIdToDelete);
+  
+      if (!userToDelete) {
+        return res.status(404).json({
+          status: false,
+          message: "User not found.",
+        });
+      }
+  
+      await Admin.deleteOne({ _id: userIdToDelete });
+  
+      return res.status(200).json({
+        status: true,
+        message: "User deleted successfully.",
+      });
+    } catch (error) {
+      return res.status(500).json({
+        status: false,
+        message: "Error deleting user",
+        data: error,
+      });
+    }
+  }
 };
 
 export default adminCtrl;

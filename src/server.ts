@@ -7,6 +7,8 @@ import routes from "@routes/index";
 import mongoose from "mongoose";
 import TranslationModel, { ITranslation } from "models/translation";
 import translationJson from "./translations.json";
+import adminRouter from "./routes/admin-routes"; // Adjust path as needed
+import dashboard from './routes/dashboard-routes'
 // interface ITranslation {
 //   original_language: string;
 //   [key: string]: any; // Add other properties as needed
@@ -27,8 +29,9 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.set("json spaces", 4);
 
-const PORT: number = process.env.PORT ? parseInt(process.env.PORT) : 5501;
-
+const PORT: number = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+app.use("/admin", adminRouter);
+app.use("/auth", dashboard);
 app.use("/web/api", routes); // use routes
 interface MongoDate {
   $date: string;
@@ -41,20 +44,7 @@ const isMongoDate = (value: any): value is MongoDate => {
 const startServer = async () => {
   try {
     // Assuming translationJson is an array of objects
-    const translations = Array.isArray(translationJson)
-      ? translationJson
-      : [translationJson];
 
-    for (const item of translations) {
-      if (!item.original_language) {
-        console.log("Missing original_language:", item);
-        continue; // Skip saving this item
-      }
-
-      // Ensure that item conforms to the ITranslation interface
-      const conversation = new TranslationModel(item as ITranslation);
-      await conversation.save(); // Save the data to MongoDB
-    }
 
     app.listen(PORT, () => {
       console.log("Server is running on port", PORT);

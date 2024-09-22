@@ -6,6 +6,7 @@ dotenv.config();
 const router: Router = express.Router();
 import adminRouter from "./admin-routes";
 
+
 router.use("/admin", adminRouter);
 
 router.get("/", function (req, res, next) {
@@ -13,5 +14,7 @@ router.get("/", function (req, res, next) {
     .status(statusConstants.SUCCESS_CODE)
     .json("Welcome to the Lingotalk Web - API");
 });
+
+
 
 export default router;

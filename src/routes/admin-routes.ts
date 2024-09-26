@@ -6,11 +6,35 @@ const adminRouter: Router = express.Router();
 
 adminRouter.post("/register", adminCtrl.register);
 adminRouter.post("/login", adminCtrl.login);
-adminRouter.get("/logout", authMiddleware.verifyToken, adminCtrl.logout);
-adminRouter.post("/token", authMiddleware.verifyRefreshToken, adminCtrl.getAccessToken);
-adminRouter.get("/list", authMiddleware.verifyToken,  adminCtrl.listAdmins);
-adminRouter.post("/create",authMiddleware.verifyToken, adminCtrl.createAdmin);
-adminRouter.delete("/delete/:id",authMiddleware.verifyToken, adminCtrl.deleteAdmin);
+adminRouter.post(
+  "/token",
+  authMiddleware.verifyRefreshToken,
+  adminCtrl.getAccessToken
+);
+adminRouter.post("/logout", authMiddleware.verifyToken, adminCtrl.logout);
 
+// Admin
+adminRouter.get("/list-mod", authMiddleware.verifyToken, adminCtrl.modeAdmin);
+
+// Super Admin
+adminRouter.get(
+  "/super-admin/list",
+  authMiddleware.verifyToken,
+  adminCtrl.listAllAdmins
+);
+adminRouter.post(
+  "/super-admin/create",
+  authMiddleware.verifyToken,
+  adminCtrl.createAdmin
+);
+//
+
+adminRouter.delete(
+  "/super-admin/delete/:id",
+  authMiddleware.verifyToken,
+  adminCtrl.deleteAdmin
+);
+
+// Patch - update
 
 export default adminRouter;

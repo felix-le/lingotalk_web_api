@@ -16,13 +16,20 @@ import dashboard from './routes/dashboard-routes'
 
 const app: Application = express();
 
+
 mongoose
   .connect(process.env.DB_CONN_STRING as string)
   .then(() => console.log("MongoDB connected!"))
   .catch((err) => console.error("Connection error", err));
 
 dotenv.config();
-app.use(cors());
+
+// fix bug blocked by cors policy
+app.use(cors({
+  origin: process.env.FE_URL, // Specify the allowed origin
+  credentials: true, // Allow credentials 
+}));
+
 app.use(logger("dev"));
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));

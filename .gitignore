@@ -5,6 +5,7 @@
 /.pnp
 .pnp.js
 .DS_Store
+yarn.lock
 # testing
 /coverage
 # production
@@ -31,7 +32,7 @@ node_modules
 xlsxFiles/loginBackUp/
 
 /logs/*
-yarn.lock
+
 /dist
 .env
 .DS_Store

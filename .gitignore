@@ -31,7 +31,7 @@ node_modules
 xlsxFiles/loginBackUp/
 
 /logs/*
-
+yarn.lock
 /dist
 .env
 .DS_Store

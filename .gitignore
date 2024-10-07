@@ -5,6 +5,7 @@
 /.pnp
 .pnp.js
 .DS_Store
+yarn.lock
 # testing
 /coverage
 # production

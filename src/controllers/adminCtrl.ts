@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { setCache, getCache, DEFAULT_CACHE_TIME } from "@utils/cache";
 import authCtrl from "./authCtrl"; // Import the auth controller
+import TranslationModel, { ITranslation } from "models/translation";
 
 const PORT: number = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
@@ -289,6 +290,54 @@ const adminCtrl = {
       return res.status(500).json({
         status: false,
         message: "Error deleting user",
+        data: error,
+      });
+    }
+  },
+
+  listTranslations: async (req: Request, res: Response) => {
+    const user = req.userData as IUser; // Assuming `userData` is populated with JWT payload
+
+    try {
+      let query: any = {};
+      if (Number(user.level) === 0) {
+        // Mods: Can only view translations matching their languages
+        query = {
+          original_language: user.original_language,
+          target_language: user.learning_language,
+        };
+      } else if (Number(user.level) >= 1) {
+        // Admins and Super Admins: Can view all translations
+        query = {}; // No filter applied for languages
+      }
+
+      // Fetch translations and sort by original_language and target_language
+      const translations = await TranslationModel.find(query)
+        .sort({ original_language: 1, target_language: 1 }) // Sort by original and target language
+        .exec();
+
+      // Optional: Combine Admin data if needed
+      const combinedData = await Promise.all(
+        translations.map(async (translation: any) => {
+          const admin = await Admin.findOne({
+            original_language: translation.original_language,
+            learning_language: translation.target_language,
+          });
+          return {
+            ...translation.toObject(),
+            admin: admin ? admin.username : null, // Add admin data if available
+          };
+        })
+      );
+
+      return res.status(200).json({
+        status: true,
+        data: combinedData,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        status: false,
+        message: "Error fetching translations",
         data: error,
       });
     }

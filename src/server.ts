@@ -9,6 +9,9 @@ import TranslationModel, { ITranslation } from "models/translation";
 import translationJson from "./translations.json";
 import adminRouter from "./routes/admin-routes"; // Adjust path as needed
 import dashboard from './routes/dashboard-routes'
+import partnerRouter from "@routes/partner-routes";
+import teacherRouter from "@routes/teacher-routes";
+import tranlationRouter from "@routes/translate-routers";
 // interface ITranslation {
 //   original_language: string;
 //   [key: string]: any; // Add other properties as needed
@@ -40,6 +43,10 @@ const PORT: number = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 app.use("/admin", adminRouter);
 app.use("/auth", dashboard);
 app.use("/web/api", routes); // use routes
+app.use("/partner", partnerRouter);
+app.use("/teacher", teacherRouter);
+app.use("/translation", tranlationRouter);
+
 interface MongoDate {
   $date: string;
 }
